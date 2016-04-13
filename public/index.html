@@ -3,11 +3,19 @@
   <head>
     <title>Getting MEAN</title>
   </head>
-  <body>
-    <div ng-app>
-      <p>Name: <input ng-model="name" /></p>
-      <h1>Hello {{name}}</h1>
+  <body ng-app="postApp">
+    <div ng-controller="postCtrl">
+      <div>
+        <div>Name: <input ng-model="author" /></div>
+        <div>Message: <textarea ng-model="content"></textarea></div>
+        <div><button ng-click="addPost()">Post</button></div>
+      </div>
+      <div ng-repeat="post in posts">
+        <p>{{post.content}}</p>
+        <h5>{{post.author}}</h5>
+      </div>
     </div>
     <script src="/angular/angular.min.js"></script>
+    <script src="/js/app.js"></script>
   </body>
 </html>
