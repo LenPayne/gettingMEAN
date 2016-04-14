@@ -227,3 +227,128 @@ Modify the existing `<body>` and opening `<div>` tags to be:
 After completing all of these steps (and only after completing ALL of these
 steps,) you will be able to navigate to http://localhost:3000/ and be able to
 add posts to your collection.
+
+## Phase Three - Retrieving Dummy Data from the Back-End (Express)
+
+At this point, we have a system that holds posts in active browser memory. So
+long as the browser window/tab stays open, the application will display the same
+posts and allow you to add more to the list. However, there is no concurrency:
+if you navigate to the app from another browser, you will not see the same list
+of posts. We will work to fix that next.
+
+On the NodeJS side, we will use the Express framework to create an endpoint to
+retrieve a list of posts.
+
+First, we will declare a `posts` collection on the `server.js` file. Near the
+top of the file, add the line:
+
+    var posts = [];
+
+This declares a globally-available collection of `posts` objects.
+
+Now, between the `app.use` and the `app.listen` lines, add the following block:
+
+    app.get('/posts', function(request, response) {
+      response.send(posts);
+    });
+
+This provides an endpoint for the HTTP GET method on the `/posts` URL. It
+declares a function that takes in a `request` and a `response` object (this is
+how Express works.) The `response` has a method to `send` out some data, and at
+this point we return `posts`.
+
+Whenever you make changes to `server.js`, you will need to go to your command
+prompt and cancel the current-running `node` process by pressing **Ctrl-C**.
+Re-run the process with `node server.js` and you should be able to navigate to
+http://localhost:3000/posts and receive `[]` as a response.
+
+### Adding Posts to the Collection
+
+To enable adding Posts, we will want to include a NodeJS middleware called
+`body-parser`, that parses the body of a request into objects that we can use.
+
+This is a multi-step process. First, we must change our `package.json` file to
+declare that `body-parser` is a required dependency. Modify your `"dependencies"`
+object to include the key-value pair: `"body-parser" : "1.x"`.
+
+    "dependencies" : {
+      "body-parser" : "1.x",
+      ...
+    }
+
+Once you save this file, you must re-run `npm install` at the command line.
+
+Now you can go back to `server.js` and declare that `body-parser` is required.
+Do this between the `var express` and `var app` lines.
+
+    var express = require('express');
+    var bodyParser = require('body-parser');
+    var app = express();
+
+Now, we must declare that the `app` actually USES this middleware by adding the
+following line after the other `app.use` lines:
+
+    app.use(bodyParser.json());
+
+Finally, we can make an `app.post` block for `/posts` that will receive a JSON
+object from Angular and add it to our `posts` collection.
+
+At this point, if we re-start the `node server.js` process, we will be able to
+send a POST to our new server. This can be tested with [Postman](https://www.getpostman.com/),
+but we're going to barrel ahead and move back to Angular to add posts to our list.
+
+### Sending New Posts from Angular
+
+On the Angular side, we must use the `$http` service to interact with our
+Express endpoints. First, we must declare that we use the `$http` service in our
+controller declaration. We add `$http` as a parameter on the function in `app.js`
+as so:
+
+    postApp.controller('postCtrl', function($scope, $http)
+
+The rest of the controller requires significant reworking as well. It may be
+easiest to do a full re-write:
+
+    postApp.controller('postCtrl', function($scope, $http) {
+      $scope.posts = [];
+
+      $scope.getPosts = function() {
+        $http.get('/posts').then(
+          function(response) {
+            $scope.posts = response.data;
+          },
+          function(response) {
+            console.log(response);
+          });
+      };
+
+      $scope.addPost = function() {
+        var newPost = {
+          author: $scope.author,
+          content: $scope.content
+        };
+        $http.post('/posts', newPost).then(
+          $scope.getPosts,
+          function(response) {
+            console.log(response);
+          });
+      };
+
+      $scope.getPosts();
+    });
+
+Breaking this down we:
+
+1. Leave the default `posts` collection empty.
+2. Set up a `getPosts` function that uses the `$http` service to `get` data from
+   our `/posts` resource. This `response.data` is then applied to our `posts`
+   collection. The remainder of this block is error reporting.
+3. Modify our `addPost` function to send over the `$http` service to `post` data
+   to our `/posts` resource. On success, it calls our `getPosts` function.
+4. Call out to `getPosts` for the first time to make sure our `posts` information
+   is updated when we first load the page.
+
+At this point, we should have a working site that allows us to add and read
+posts to our service, that presents the same information across every connected
+browser (try it and see: run `node server.js` and go to http://localhost:3000 in
+another browser or in incognito mode.)
