@@ -293,6 +293,12 @@ following line after the other `app.use` lines:
 Finally, we can make an `app.post` block for `/posts` that will receive a JSON
 object from Angular and add it to our `posts` collection.
 
+	app.post('/posts', function(request, response) {
+	  var post = request.body;
+	  posts.push(post);
+	  response.send(post);
+	});
+
 At this point, if we re-start the `node server.js` process, we will be able to
 send a POST to our new server. This can be tested with [Postman](https://www.getpostman.com/),
 but we're going to barrel ahead and move back to Angular to add posts to our list.
