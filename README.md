@@ -4,6 +4,8 @@ This tutorial is designed to take a developer from zero to MEAN in roughly 2-3
 hours. Knowledge of HTML, CSS and JavaScript is encouraged, but the exercise is
 completely do-able from a minimal knowledge perspective.
 
+[Relevant PowerPoint](https://www.dropbox.com/s/1mz5js7au5n57do/MEAN%20Web%20Apps.pptx?dl=0)
+
 ## Agenda
 
 * Environment Setup (`git`, `node`, `npm`, `mongo`, `angular`)
