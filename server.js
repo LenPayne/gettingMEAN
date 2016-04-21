@@ -10,8 +10,11 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var app = express();
 
-// Sets up an empty, global "posts" collection
-var posts = [];
+// Steps to Initialize Mongoose (our MongoDB ORM)
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/posts');
+var postSchema = mongoose.Schema({author: String, content: String});
+var Post = mongoose.model('Post', postSchema);
 
 // Sets up the "public" folder to hold publicly available content
 app.use(express.static('public'));
@@ -23,14 +26,26 @@ app.use(bodyParser.json());
 
 // Provides a GET endpoint to return the "posts" collection
 app.get('/posts', function(request, response) {
-  response.send(posts);
+  // Uses Mongoose to go grab from the posts collection
+  Post.find(function(err, posts) {
+    if (err)
+      response.status(500).send('Failed to retrieve posts');
+    else
+      response.send(posts);
+  });
 });
 
 // Provides a POST endpoint to accept a new "post"
 app.post('/posts', function(request, response) {
-  var post = request.body;
-  posts.push(post);
-  response.send(post);
+  // Builds a new instance of a Post object and saves it using Mongoose
+  var post = new Post(request.body);
+  post.save(function (err) {
+    if (err) {
+      response.status(500).send('Failed to save post: ' + request.body);
+    } else {
+      response.send(post);
+    }
+  });
 });
 
 // Configures the app to start listening on port 3000

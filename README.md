@@ -360,3 +360,143 @@ At this point, we should have a working site that allows us to add and read
 posts to our service, that presents the same information across every connected
 browser (try it and see: run `node server.js` and go to http://localhost:3000 in
 another browser or in incognito mode.)
+
+## Phase Four - Tying the Back-End to a Data Source (MongoDB)
+
+Now that we have our AngularJS app transferring data to/from the NodeJS/Express
+server, we are able to show our list of Posts to everyone. You can navigate to
+the page in different tabs, and different browsers, and everyone sees the same
+Posts.
+
+Unfortunately, there is a small quirk: when the `node server.js` process closes,
+all of the data that is stored in memory disappears.
+
+To fix this problem, we need to persist that data to a long-term datastore:
+MongoDB. We will simplify our interaction with MongoDB by using a tool called
+`mongoose`.
+
+### Connecting to the MongoDB Datastore
+
+In the `server.js` file, add the following lines up near the top (anywhere above
+the `app.get` and `app.post` lines):
+
+    var mongoose = require('mongoose');
+    mongoose.connect('mongodb://localhost/posts');
+    var postSchema = mongoose.Schema({author: String, content: String});
+    var Post = mongoose.model('Post', postSchema);
+
+Breaking this down:
+
+1. We import the `mongoose` package (which was already imported as part of the
+   `package.json` file, and pulled in by `npm install`.)
+2. We connect to the MongoDB server running locally, and specifically to the
+   `posts` collection.
+3. We build a `Schema` that tells `mongoose` exactly what a good `Post` is going
+   to look like (ie- it has an author and some content.) This helps prevent us
+   from saving bad data into our datastore.
+4. We create a data-model named `Post` that uses this schema, and gives us
+   access to a great number of tools like `find`, `save`, and others.
+
+### Retrieving Posts from MongoDB
+
+In addition to connecting to the datastore, we need to actually USE it in our
+program. The first thing we'll do is modify our `app.get` block so that it finds
+the data stored in MongoDB:
+
+    app.get('/posts', function(request, response) {
+      Post.find(function(err, posts) {
+        if (err)
+          response.status(500).send('Failed to retrieve posts');
+        else
+          response.send(posts);
+      });
+    });
+
+Breaking this down:
+
+1. We use the `Post` model object to call its `find` method, that will return
+   all of the objects in the related collection.
+2. If there's an error, we warn the user by setting the status of our `response`
+   to be 500, and giving a bit of feedback on what happened.
+3. If there was no error, though, we simply respond with the full `posts` object
+   straight out of `mongoose`. This will be presented already as a JSON array,
+   ready for AngularJS to parse.
+
+### Saving a Post to MongoDB
+
+Our last step of data persistence is to save the Posts that come in from the
+outside world. We do this by modifying our `app.post` block:
+
+    app.post('/posts', function(request, response) {
+      var post = new Post(request.body);
+      post.save(function (err) {
+        if (err) {
+          response.status(500).send('Failed to save post: ' + request.body);
+        } else {
+          response.send(post);
+        }
+      });
+    });
+
+Breaking this down:
+
+1. We create a new `Post` model object, and feed it the `request.body`, which in
+   our case is a JSON object that holds the author and content.
+2. That new `Post` model object has a save method that will talk to `mongoose`
+   in the background for us and either succeed or fail.
+3. If it fails, we give some feedback to the user, similar to what we did with
+   `app.get` previously.
+4. If it succeeds, we send the `post` object back as a sign that everything was
+   A-Okay.
+
+## Reviewing the Finished Product
+
+At this point, the code is complete and correct. However, we need to make sure
+the environment around the code is functional. Namely, we must make sure that
+MongoDB is turned on.
+
+This varies by environment, so I will refer you to MongoDB's references for
+[Windows](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-windows/),
+[OS X](https://docs.mongodb.org/manual/tutorial/install-mongodb-on-os-x/), and
+[Linux](https://docs.mongodb.org/manual/administration/install-on-linux/).
+
+To verify that your MongoDB instance is configured and running, you should be
+able to run `mongo` at the command line with no parameters and it will connect
+to your locally running instance. It will look something like this:
+
+    $ mongo
+    MongoDB shell version: 2.6.10
+    connecting to: test
+    > use posts;
+    switched to db posts
+    > exit;
+
+If you already have some posts in your datastore, you can run `db.posts.find();`
+and it will return all of the content in JSON format.
+
+Now you can cancel (Ctrl-C) and re-run your `node server.js` process, and it
+should work, and persist the data to the database. You can test this by
+navigating to http://localhost:3000 and inserting some data. When you cancel and
+re-run the application, the data should still be available in your app.
+
+Congratulations! Your project is now complete! It works! Of course, there's
+always more to add...
+
+### Possible Areas of Expansion
+
+1. You can make the user interface more appealing using [Angular-UI](https://angular-ui.github.io/)
+   or some custom CSS.
+2. You can add features like editing and deleting posts by adding elements to
+   the AngularJS forms in `index.html` that send different messages through the
+   controller in `app.js` back to the `server.js`. Specifically, we often use
+   `$http.put()` to edit messages, and `$http.delete()` to send a message to
+   delete.
+3. This application does not scale super-well: it sends the WHOLE COLLECTION
+   every time you do anything. On a test basis, a handful is fine, but if the
+   collection of posts measures in hundreds or thousands, this can slow the
+   application down. We can implement paging in the UI and in the Server to make
+   this process easier.
+4. You can add a login and authentication process of your own devising, or tie
+   into an OAuth provider like Google, Facebook or Twitter.
+
+The world is yours for the taking, go get MEAN about it!
